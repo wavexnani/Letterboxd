@@ -1,0 +1,44 @@
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment folders
+flaskenv/
+venv/
+.env
+*.env
+
+# Instance folder (contains configs/secrets, not for version control)
+instance/
+
+# DB files if present
+*.sqlite3
+*.db
+
+# Logs
+*.log
+
+# Mac system files
+.DS_Store
+
+# VS Code settings (if you're using it)
+.vscode/
+
+# Ignore Python egg info
+*.egg-info/
+dist/
+build/
+
+# Ignore coverage reports
+htmlcov/
+.coverage
+coverage.xml
+
+# Ignore compiled files
+*.so
+
+# Ignore requirement locks if not used
+Pipfile.lock
+poetry.lock
