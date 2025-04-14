@@ -12,7 +12,7 @@ export default function LoginPage() {
     password: "",
   });
 
-  const saltRounds = 10;
+  
 
   const [buttonDisabled, setButtonDisabled] = React.useState(true);
   const [loading, setLoading] = React.useState(false);
