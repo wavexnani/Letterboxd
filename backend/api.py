@@ -158,6 +158,13 @@ class movies(Resource):
     def get(self):
         movies = Movies.query.all()
         return movies
+    @marshal_with(movie_fields)
+    def delete(self):
+        movies = Movies.query.all()
+        for movie in movies:
+            db.session.delete(movie)
+        db.session.commit()
+        return movies, 200
     
 class movie(Resource):
     @marshal_with(movie_fields)

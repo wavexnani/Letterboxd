@@ -112,7 +112,7 @@ export default function HomePage() {
         <div className=" overflow-x-auto overflow-y-hidden max-w-full h-70 rounded-2xl bg-[#191919] ">
           {/* we have to add boxes */}
           <div className="flex flex-nowrap overflow-y-hidden px-10 pt-7 gap-6">
-            {movies.slice(3, 18).map((movie) => (
+            {movies.map((movie) => (
               <div key={movie.id} className="shrink-0">
                 <Image
                   onClick={pushTomovie}
@@ -137,7 +137,7 @@ export default function HomePage() {
           <div className="m-10 max-w-full h-70 rounded-2xl">
             {/* we have to add boxes */}
             <div className="flex flex-nowrap overflow-y-hidden pt-7 gap-6">
-              {movies.slice(18, 30).map((movie) => (
+              {movies.map((movie) => (
                 <div key={movie.id} className="shrink-0">
                   <Image
                     onClick={pushTomovie}
