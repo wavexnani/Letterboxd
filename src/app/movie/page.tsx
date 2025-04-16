@@ -6,7 +6,7 @@ export default function MoviePage() {
       {/* Background Image */}
       <div className="relative w-full h-[500px] md:h-[560px]">
         <Image
-          src="/bigPosters/Biginception.jpg"
+          src="/bigPosters/ins.jpg"
           alt="Big Poster"
           layout="fill"
           objectFit="cover"

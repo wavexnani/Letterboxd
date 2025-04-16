@@ -1,6 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import axios from "axios";
+import { useEffect, useState } from "react";
 
 export default function HomePage() {
   const router = useRouter();
@@ -17,11 +19,22 @@ export default function HomePage() {
     router.push("/login");
   };
 
-  const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
-  console.log(apiKey); // Check if it logs correctly
+  const [movies, setMovies] = useState([]);
+
+  useEffect(() => {
+    axios
+      .get("http://127.0.0.1:5000/movies")
+      .then((res) => {
+        setMovies(res.data);
+        console.log(res.data); // 👈 this updates the movies state
+      })
+      .catch((error) => {
+        console.error("Error fetching movies:", error);
+      });
+  }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-black text-white ">
       <div>
         <div className="relative w-fill h-[430px] z-0">
           <Image
@@ -73,43 +86,37 @@ export default function HomePage() {
       </div>
 
       {/* Top rated Movies */}
-      <div className="container mx-auto mt-20 p-4 ">
+      <div className="container mx-auto text-cente mt-20 p-4 ">
         <h1 className="text-3xl font-bold text-center mb-6">Movies</h1>
-        <div className="flex flex-wrap justify-center gap-6 ">
-          {movies.map(
-            (movie) =>
-              movie.id <= 3 && (
-                <div
-                  key={movie.id}
-                  className="bg-[#191919] rounded-lg p-10 shadow-lg"
-                >
-                  <Image
-                    onClick={pushTomovie}
-                    src={movie.poster}
-                    alt={movie.title}
-                    width={150}
-                    height={300}
-                    className="rounded-lg"
-                  />
-                  <h2 className="text-xl font-semibold mt-2 text-white text-center">
-                    {movie.title}
-                  </h2>
-                </div>
-              )
-          )}
+        <div className="flex flex-wrap overflow-y-hidden justify-center gap-6 ">
+          {movies.slice(0, 3).map((movie) => (
+            <div
+              key={movie.id}
+              className="bg-[#191919] rounded-lg p-10 shadow-lg"
+            >
+              <Image
+                onClick={pushTomovie}
+                src={movie.image}
+                alt={movie.title}
+                width={150}
+                height={300}
+                className="rounded-lg"
+              />
+            </div>
+          ))}
         </div>
       </div>
 
       <div className="mt-10 mx-10 flex flex-col">
         <div className="text-3xl pb-3">Trending</div>
-        <div className=" overflow-x-auto max-w-full h-70 rounded-2xl bg-[#191919] ">
+        <div className=" overflow-x-auto overflow-y-hidden max-w-full h-70 rounded-2xl bg-[#191919] ">
           {/* we have to add boxes */}
-          <div className="flex flex-nowrap px-10 pt-7 gap-6">
-            {movies.map((movie) => (
+          <div className="flex flex-nowrap overflow-y-hidden px-10 pt-7 gap-6">
+            {movies.slice(3, 18).map((movie) => (
               <div key={movie.id} className="shrink-0">
                 <Image
                   onClick={pushTomovie}
-                  src={movie.poster}
+                  src={movie.image}
                   alt={movie.title}
                   width={150}
                   height={300}
@@ -127,121 +134,26 @@ export default function HomePage() {
           className=" max-w-full h-90 bg-[#191919] "
           style={{ boxShadow: "inset 0 4px 10px rgba(0, 0, 0, 0.4)" }}
         >
-          <div className="m-10 max-w-full h-70 rounded-2xl overflow-auto  ">
+          <div className="m-10 max-w-full h-70 rounded-2xl">
             {/* we have to add boxes */}
-            <div className="flex flex-nowrap pt-7 gap-6">
-              {movies.map((movie) => (
+            <div className="flex flex-nowrap overflow-y-hidden pt-7 gap-6">
+              {movies.slice(18, 30).map((movie) => (
                 <div key={movie.id} className="shrink-0">
                   <Image
                     onClick={pushTomovie}
-                    src={movie.poster}
+                    src={movie.backdrop}
                     alt={movie.title}
-                    width={150}
+                    width={350}
                     height={300}
                     className="rounded-lg"
                   />
+                  <h2 className="text-2xl text-center pt-3">{movie.title}</h2>
                 </div>
               ))}
             </div>
           </div>
         </div>
       </div>
-
-      <div className="mt-10 mx-10 flex flex-col">
-        <div className="text-3xl pb-3">English</div>
-        <div className=" max-w-full h-70 rounded-2xl overflow-auto bg-[#191919] ">
-          {/* we have to add boxes */}
-          <div className="flex flex-nowrap px-10 pt-7 gap-6">
-            {movies.map((movie) => (
-              <div key={movie.id} className="shrink-0">
-                <Image
-                  onClick={pushTomovie}
-                  src={movie.poster}
-                  alt={movie.title}
-                  width={150}
-                  height={300}
-                  className="rounded-lg"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
-
-const movies = [
-  {
-    id: 1,
-    title: "Spiderman",
-    year: 2002,
-    director: "Sam Raimi",
-    description: "A story of Peter Parker becoming Spiderman.",
-    poster: "/movies/spiderman.jpg",
-  },
-  {
-    id: 2,
-    title: "Inception",
-    year: 2010,
-    director: "Christopher Nolan",
-    description: "A skilled thief enters dreams to steal secrets.",
-    poster: "/movies/inception.jpg",
-  },
-  {
-    id: 3,
-    title: "Joker",
-    year: 2019,
-    director: "Todd Phillips",
-    description: "Arthur Fleck transforms into the Joker.",
-    poster: "/movies/joker.jpg",
-  },
-  {
-    id: 4,
-    title: "Spiderman",
-    year: 2002,
-    director: "Sam Raimi",
-    description: "A story of Peter Parker becoming Spiderman.",
-    poster: "/movies/spiderman.jpg",
-  },
-  {
-    id: 5,
-    title: "Inception",
-    year: 2010,
-    director: "Christopher Nolan",
-    description: "A skilled thief enters dreams to steal secrets.",
-    poster: "/movies/inception.jpg",
-  },
-  {
-    id: 6,
-    title: "Joker",
-    year: 2019,
-    director: "Todd Phillips",
-    description: "Arthur Fleck transforms into the Joker.",
-    poster: "/movies/joker.jpg",
-  },
-  {
-    id: 7,
-    title: "Spiderman",
-    year: 2002,
-    director: "Sam Raimi",
-    description: "A story of Peter Parker becoming Spiderman.",
-    poster: "/movies/spiderman.jpg",
-  },
-  {
-    id: 8,
-    title: "Inception",
-    year: 2010,
-    director: "Christopher Nolan",
-    description: "A skilled thief enters dreams to steal secrets.",
-    poster: "/movies/inception.jpg",
-  },
-  {
-    id: 9,
-    title: "Joker",
-    year: 2019,
-    director: "Todd Phillips",
-    description: "Arthur Fleck transforms into the Joker.",
-    poster: "/movies/joker.jpg",
-  },
-];

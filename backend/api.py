@@ -4,9 +4,10 @@ from flask_restful import Api, Resource, reqparse, fields, marshal_with, abort
 from flask_cors import CORS
 import bcrypt
 import requests
+from dotenv import load_dotenv
 import os
 
-
+load_dotenv(dotenv_path=".env.local")
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
@@ -26,7 +27,7 @@ def fetch_movies(num):
             backdrop = f"https://image.tmdb.org/t/p/original{movie['backdrop_path']}"
             year = movie['release_date'][:4]
             rating = movie['vote_average']
-            trailer = movie_trailer(movie['id'])
+            trailer = movie_trailer(movie['id']) or 'Trailer not available'
             description = movie['overview']
             image = f"https://image.tmdb.org/t/p/original{movie['poster_path']}"
             adult = movie['adult']
@@ -60,11 +61,11 @@ class Watchlist(db.Model):
 
 class Movies(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(80), unique=True, nullable=False)
+    title = db.Column(db.String(80), unique=False, nullable=False)
     backdrop = db.Column(db.String(120), nullable=False)
     year = db.Column(db.Integer, nullable=False)
     rating = db.Column(db.Float, nullable=False)
-    trailer = db.Column(db.String(120), nullable=False)
+    trailer = db.Column(db.String(120), nullable=True)
     description = db.Column(db.String(200), nullable=False)
     image = db.Column(db.String(120), nullable=False)
     adult = db.Column(db.Boolean, nullable=False)
@@ -221,12 +222,7 @@ api.add_resource(watchlist, '/watchlist')
 api.add_resource(users, '/users')
 api.add_resource(user, '/users/<int:id>')
 
-@app.before_first_request
-def preload_movies():
-    if Movies.query.count() == 0:  # If no movies in the database
-        fetch_movies(1)  # Fetch movies (you can decide the number of pages)
-        fetch_movies(2)
-        fetch_movies(3)
+
 
 @app.route('/signup', methods=['GET' ,'POST'])
 def signup():
@@ -263,8 +259,14 @@ def login():
     hashed_password = user.password.encode('utf-8')  # Stored as str, convert to bytes
 
     if bcrypt.checkpw(password.encode('utf-8'), hashed_password):
-        return jsonify({'message': 'Login successful'}), 200
+        print("hello")
+        if Movies.query.count() == 0:
+            try:
+                fetch_movies(1)
+            except Exception as e:
+                print(f"Error fetching movies: {e}")
 
+        return jsonify({'message': 'Login successful'}), 200
     return jsonify({'message': 'Invalid credentials'}), 401
 
 
@@ -276,4 +278,3 @@ def home():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
