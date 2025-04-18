@@ -12,15 +12,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  
-
   const onLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setLoading(true);
-      const response = await axios.post("http://127.0.0.1:5000/login", user, {
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await axios.post(
+        "http://127.0.0.1:5000/fetch_movies",
+        user,
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
       console.log("Login success:", response.data);
       router.push("/home");
     } catch (error: any) {
@@ -41,7 +43,12 @@ export default function LoginPage() {
     <div className="relative min-h-screen text-white font-sans">
       {/* Background Image */}
       <div className="absolute inset-0 -z-10">
-        <Image src="/netflix.jpg" alt="background" fill className="object-cover" />
+        <Image
+          src="/netflix.jpg"
+          alt="background"
+          fill
+          className="object-cover"
+        />
         <div className="absolute inset-0 bg-black opacity-70" />
       </div>
 
@@ -91,7 +98,10 @@ export default function LoginPage() {
 
           {/* Password */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-1">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium mb-1"
+            >
               Password
             </label>
             <input
@@ -121,4 +131,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

@@ -16,27 +16,141 @@ CORS(app)
 
 TMDB_KEY = os.getenv('NEXT_PUBLIC_TMDB_API_KEY')
 
-def fetch_movies(num):
-    uri = f'https://api.themoviedb.org/3/movie/popular?api_key={TMDB_KEY}&language=en-US&page={num}'
-    response = requests.get(uri)
-    if response.status_code == 200:
-        data = response.json()
-        movies = data['results']
-        for movie in movies:
-            title = movie['title']
-            backdrop = f"https://image.tmdb.org/t/p/original{movie['backdrop_path']}"
-            year = movie['release_date'][:4]
-            rating = movie['vote_average']
-            trailer = movie_trailer(movie['id']) or 'Trailer not available'
-            description = movie['overview']
-            image = f"https://image.tmdb.org/t/p/original{movie['poster_path']}"
-            adult = movie['adult']
+@app.route('/fetch_movies', methods=['GET', 'POST'])
+def fetch_movies():
+    try:
+        # Ensure the request has JSON data
+        data = request.get_json()
+        if not data:
+            return jsonify({'message': 'Missing JSON payload'}), 400
 
-            new_movie = Movies(title=title, backdrop=backdrop, year=year, rating=rating, trailer=trailer, description=description, image=image, adult=adult)
-            db.session.add(new_movie)
+        email = data.get("email")
+        password = data.get("password") 
+
+        # Check if both email and password were provided
+        if not email or not password:
+            return jsonify({'message': 'Email and password are required'}), 400
+
+        # Find user by email or username
+        user = User.query.filter((User.email == email) | (User.username == email)).first()
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+
+        # Compare provided password with stored hash
+        hashed_password = user.password.encode('utf-8')  # Stored as string
+        print(f"Hashed password from DB: {hashed_password}")
+        if not bcrypt.checkpw(password.encode('utf-8'), hashed_password):
+            return jsonify({'message': 'Invalid credentials'}), 401
+        
+        # Fetch popular movies from TMDB
+        uri = f'https://api.themoviedb.org/3/movie/popular?api_key={TMDB_KEY}&language=en-US&page=1'
+        response = requests.get(uri, timeout=10)
+        if response.status_code != 200:
+            print(f"TMDB Error: {response.status_code}, {response.text}")
+            return jsonify({'message': 'Failed to fetch movies from TMDB'}), 500
+
+        data = response.json()
+        movies = data.get('results', [])
+        for movie in movies:
+            try:
+                title = movie['title']
+                backdrop = f"https://image.tmdb.org/t/p/original{movie.get('backdrop_path')}"
+                year = movie.get('release_date', '')[:4]
+                rating = movie.get('vote_average', 0)
+                trailer = movie_trailer(movie['id']) or False
+                description = movie.get('overview', False)
+                image = f"https://image.tmdb.org/t/p/original{movie.get('poster_path')}"
+                adult = movie.get('adult', False)
+
+                new_movie = Movies(
+                    title=title,
+                    backdrop=backdrop,
+                    year=year,
+                    rating=rating,
+                    trailer=trailer,
+                    description=description,
+                    image=image,
+                    adult=adult
+                )
+                db.session.add(new_movie)
+            except Exception as e:
+                print(f"Error adding movie {movie.get('title')}: {e}")
+            
         db.session.commit()
-    else:
-        print(f"Failed to fetch movies: {response.status_code}")
+        return jsonify({'message': 'Movies fetched and saved successfully'}), 200
+            
+
+    except Exception as e:
+        print(f"Server error: {e}")
+        return jsonify({'message': 'Internal server error'}), 500
+
+
+@app.route('/movies_id', methods=['POST'])
+def movies_id():
+    try:
+        data = request.get_json()
+        if not data or 'id' not in data:
+            return jsonify({'message': 'Missing or invalid ID'}), 400
+
+        movie_id = data['id']
+        movie = Movies.query.filter_by(id=movie_id).first()
+        if not movie:
+            return jsonify({'message': 'Movie not found'}), 404
+
+        return jsonify({
+            'id': movie.id,
+            'title': movie.title,
+            'backdrop': movie.backdrop,
+            'year': movie.year,
+            'rating': movie.rating,
+            'trailer': movie.trailer,
+            'description': movie.description,
+            'image': movie.image,
+            'adult': movie.adult
+        }), 200
+
+    except Exception as e:
+        print("Error in fetching movie by ID:", str(e))
+        return jsonify({'message': 'Internal server error'}), 500
+
+
+
+@app.route('/movie_search', methods=['POST'])
+def movie_search():
+    try:
+        data = request.get_json()
+        if not data or 'quary' not in data:
+            print("y")
+            return jsonify({'message': 'Missing or invalid query'}), 400
+
+        searchedMovies = search_movies(data['quary'])
+        print(searchedMovies)
+        print("fuck off")
+        return jsonify({'results': searchedMovies}), 200  # ✅ You must return a response
+
+    except Exception as e:
+        print("Error in searching movies:", str(e))
+        return jsonify({'message': 'Internal server error'}), 500  # ✅ Also return on error
+
+def search_movies(query):
+    url = f'https://api.themoviedb.org/3/search/movie?api_key={TMDB_KEY}&query={query}'
+    res = requests.get(url)
+    data = res.json()
+    movies = []
+    for movie in data.get('results', []):
+        movies.append({
+            'id': movie['id'],
+            'title': movie['title'],
+            'backdrop': f"https://image.tmdb.org/t/p/original{movie.get('backdrop_path')}",
+            'year': movie.get('release_date', '')[:4],
+            'rating': movie.get('vote_average', 0),
+            'trailer': movie_trailer(movie['id']) or 'Trailer not available',
+            'description': movie.get('overview', 'No description available'),
+            'image': f"https://image.tmdb.org/t/p/original{movie.get('poster_path')}",
+            'adult': movie.get('adult', False)
+        })
+    return movies
+
 
 
 def movie_trailer(movie_id):
@@ -269,7 +383,7 @@ def login():
         print("hello")
         if Movies.query.count() == 0:
             try:
-                fetch_movies(1)
+                fetch_movies()
             except Exception as e:
                 print(f"Error fetching movies: {e}")
 

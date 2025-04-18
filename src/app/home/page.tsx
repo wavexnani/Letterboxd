@@ -1,8 +1,10 @@
 "use client";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import React from "react";
+import { on } from "events";
 
 export default function HomePage() {
   const router = useRouter();
@@ -11,12 +13,16 @@ export default function HomePage() {
     router.push("/movie");
   };
 
-  const pushTosearch = () => {
+  const handleLogin = () => {
+    router.push("/login");
+  };
+
+  const handlesearch = () => {
     router.push("/search");
   };
 
-  const handleLogin = () => {
-    router.push("/login");
+  const onClick = async (id: number) => {
+    router.push(`/movie/${id}`);
   };
 
   const [movies, setMovies] = useState([]);
@@ -61,22 +67,25 @@ export default function HomePage() {
             />
           </div>
 
-          <div className="pt-32 flex flex-row flex-wrap justify-between gap-5 items-stretch ">
+          <div className="pt-32 flex flex-col flex-wrap justify-between gap-5 items-center">
             {/*welcome*/}
-            <div className="flex flex-col items-center w-1/3  text-5xl z-10 font-bold ">
-              <div>Welcome to </div>
-              <div className="pl-30"> Letter boxd</div>
+            <div className="flex flex-col md:items-start items-center w-3/4 md:text-5xl z-10 font-bold text-3xl">
+              <div>Welcome.</div>
+              <div className="pt-6">This is Letter boxd! Best for Movies.</div>
             </div>
 
             {/* search bar */}
-            <div className="relative mx-44 to-5% mt-10 w-3/4 h-10 rounded-2xl bg-white">
-              <form action="#">
+            <div className="relative to-5% mt-10 w-3/4 h-10 rounded-2xl bg-white">
+              <form onSubmit={handlesearch}>
                 <input
-                  onClick={pushTosearch}
+                  onClick={handlesearch}
                   type="text"
                   className="absolute px-4 top-0 w-full  h-10 rounded-2xl text-black bg-white"
                 />
-                <button className="absolute right-0 w-fit rounded-2xl font-bold h-10 bg-amber-300 pt-1 px-6 pb-1 text-black">
+                <button
+                  type="submit"
+                  className="absolute right-0 w-fit rounded-2xl font-bold h-10 bg-amber-300 pt-1 px-6 pb-1 text-black"
+                >
                   Search
                 </button>
               </form>
@@ -88,19 +97,19 @@ export default function HomePage() {
       {/* Top rated Movies */}
       <div className="container mx-auto text-cente mt-20 p-4 ">
         <h1 className="text-3xl font-bold text-center mb-6">Movies</h1>
-        <div className="flex flex-wrap overflow-y-hidden justify-center gap-6 ">
+        <div className="flex flex-nowrap overflow-y-hidden justify-center gap-6 ">
           {movies.slice(0, 3).map((movie) => (
             <div
               key={movie.id}
-              className="bg-[#191919] rounded-lg p-10 shadow-lg"
+              className="bg-[#191919] rounded-lg p-10 shrink-0 shadow-lg"
             >
               <Image
-                onClick={pushTomovie}
+                onClick={() => onClick(movie.id)}
                 src={movie.image}
                 alt={movie.title}
                 width={150}
                 height={300}
-                className="rounded-lg"
+                className="rounded-lg transform transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl"
               />
             </div>
           ))}
@@ -115,12 +124,12 @@ export default function HomePage() {
             {movies.map((movie) => (
               <div key={movie.id} className="shrink-0">
                 <Image
-                  onClick={pushTomovie}
+                  onClick={() => onClick(movie.id)}
                   src={movie.image}
                   alt={movie.title}
                   width={150}
                   height={300}
-                  className="rounded-lg"
+                  className="rounded-lg cursor-pointer transform transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl"
                 />
               </div>
             ))}
@@ -131,23 +140,40 @@ export default function HomePage() {
       <div className="mt-10  flex flex-col">
         <div className=" mx-10 text-3xl pb-3">Latest Trailers</div>
         <div
-          className=" max-w-full h-90 bg-[#191919] "
+          className=" max-w-full h-90 bg-[#191919] z-0"
           style={{ boxShadow: "inset 0 4px 10px rgba(0, 0, 0, 0.4)" }}
         >
-          <div className="m-10 max-w-full h-70 rounded-2xl">
+          <div className="m-10 max-w-full h-70 rounded-2xl z-10">
             {/* we have to add boxes */}
             <div className="flex flex-nowrap overflow-y-hidden pt-7 gap-6">
               {movies.map((movie) => (
-                <div key={movie.id} className="shrink-0">
+                <div
+                  key={movie.id}
+                  className="shrink-0 relative z-10 w-[350px]"
+                >
                   <Image
-                    onClick={pushTomovie}
+                    onClick={() => onClick(movie.id)}
                     src={movie.backdrop}
                     alt={movie.title}
                     width={350}
                     height={300}
-                    className="rounded-lg"
+                    className="rounded-lg transform transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl"
                   />
-                  <h2 className="text-2xl text-center pt-3">{movie.title}</h2>
+
+                  {/* Play Button */}
+                  <Image
+                    onClick={() => window.open(movie.trailer, "_blank")}
+                    src="/play.jpg"
+                    width={50}
+                    height={50}
+                    alt="play"
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer z-30"
+                    // onClick={}
+                  />
+
+                  <h2 className="text-lg text-center pt-3 font-bold">
+                    {movie.title}
+                  </h2>
                 </div>
               ))}
             </div>
