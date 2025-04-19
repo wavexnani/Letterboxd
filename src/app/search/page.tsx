@@ -20,6 +20,11 @@ export default function SearchPage() {
   const [quary, setquary] = useState("");
   const [searchedMovies, setSearchedMovies] = useState([]);
 
+  const selectedMovie = (movie:any) => {
+    localStorage.setItem("selectedMovie", JSON.stringify(movie));
+    router.push("/search/movieDetails");
+  }
+
   const onSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -86,16 +91,16 @@ export default function SearchPage() {
           </button>
         </form>
       </div>
-      <div className="m-6 bg-amber-300">
-        <div className="container mx-auto text-center mt-20 p-4">
+      <div className="m-6 bg-[#1B2B2E]">
+        <div className="container mx-auto text-center mt-20 ">
           <div className="flex flex-wrap overflow-y-hidden justify-center gap-6">
             {searchedMovies.map((movie: any) => (
               <div
                 key={movie.id}
-                className="bg-[#191919] rounded-lg p-10 shrink-0 shadow-lg"
+                className="bg-[#191919] mt-8 rounded-lg p-10 flex flex-col items-center justify-center shrink-0 shadow-lg"
               >
                 <Image
-                  onClick={pushTomovie}
+                  onClick={() => selectedMovie(movie)}
                   src={movie.image}
                   alt={movie.title}
                   width={150}
