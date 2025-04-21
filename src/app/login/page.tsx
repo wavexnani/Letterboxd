@@ -11,11 +11,15 @@ export default function LoginPage() {
   const [buttonDisabled, setButtonDisabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+ 
+  localStorage.setItem("email", user.email);
 
+  
   const onLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setLoading(true);
+      
       const response = await axios.post(
         "http://127.0.0.1:5000/fetch_movies",
         user,

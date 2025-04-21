@@ -16,10 +16,11 @@ export default function LoginPage() {
 
   const [buttonDisabled, setButtonDisabled] = React.useState(true);
   const [loading, setLoading] = React.useState(false);
-
+  
   const onSignup = async () => {
     try {
       setLoading(true);
+      localStorage.setItem("username", user.username);
       const response = await axios.post("http://127.0.0.1:5000/signup", user);
       console.log("signup sucess", response.data);
       router.push("/login");

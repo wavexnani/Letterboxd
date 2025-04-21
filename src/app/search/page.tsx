@@ -20,10 +20,10 @@ export default function SearchPage() {
   const [quary, setquary] = useState("");
   const [searchedMovies, setSearchedMovies] = useState([]);
 
-  const selectedMovie = (movie:any) => {
+  const selectedMovie = (movie: any) => {
     localStorage.setItem("selectedMovie", JSON.stringify(movie));
     router.push("/search/movieDetails");
-  }
+  };
 
   const onSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,30 +91,34 @@ export default function SearchPage() {
           </button>
         </form>
       </div>
-      <div className="m-6 bg-[#1B2B2E]">
-        <div className="container mx-auto text-center mt-20 ">
-          <div className="flex flex-wrap overflow-y-hidden justify-center gap-6">
-            {searchedMovies.map((movie: any) => (
-              <div
-                key={movie.id}
-                className="bg-[#191919] mt-8 rounded-lg p-10 flex flex-col items-center justify-center shrink-0 shadow-lg"
-              >
-                <Image
-                  onClick={() => selectedMovie(movie)}
-                  src={movie.image}
-                  alt={movie.title}
-                  width={150}
-                  height={300}
-                  className="pt4 rounded-lg transform transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl"
-                />
-                <h2 className="mt-4 text-center font-bold w-full">
-                  {movie.title}
-                </h2>
-              </div>
-            ))}
+      {searchedMovies.length > 0 ? (
+        <div className="m-6 bg-[#1B2B2E]">
+          <div className="container mx-auto text-center mt-20 ">
+            <div className="flex flex-wrap overflow-y-hidden justify-center gap-6">
+              {searchedMovies.map((movie: any) => (
+                <div
+                  key={movie.id}
+                  className="bg-[#191919] mt-8 rounded-lg p-10 flex flex-col items-center justify-center shrink-0 shadow-lg"
+                >
+                  <Image
+                    onClick={() => selectedMovie(movie)}
+                    src={movie.image}
+                    alt={movie.title}
+                    width={150}
+                    height={300}
+                    className="pt4 rounded-lg transform transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl"
+                  />
+                  <h2 className="mt-4 text-center font-bold w-full">
+                    {movie.title}
+                  </h2>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-[#1B2B2E] text-center m-10">NO MOVIES FOUND</div>
+      )}
     </div>
   );
 }

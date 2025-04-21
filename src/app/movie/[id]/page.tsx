@@ -9,6 +9,32 @@ export default function MoviePage() {
   const id = params?.id as string;
   const [personalMovie, setPersonalMovie] = useState<any>(null);
 
+  const addToWatchlist = async (username: string, movieId: number) => {
+    try {
+      const res = await axios.post(
+        "http://127.0.0.1:5000/watchlist", 
+        { username, movie_id: movieId },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (res.status === 200) {
+        alert("Added to watchlist!");
+      } else {
+        alert("Failed to add to watchlist.");
+      }
+    } catch (error: any) {
+      console.error(
+        "Error adding to watchlist:",
+        error.response?.data || error.message
+      );
+      alert("Failed to add to watchlist.");
+    }
+  };
+
   useEffect(() => {
     if (!id) return;
 
@@ -120,7 +146,18 @@ export default function MoviePage() {
 
       {/* Watchlist Button */}
       <div className="flex justify-center md:justify-end px-6 md:px-16 mt-10">
-        <button className="px-6 md:px-8 py-2 text-lg md:text-2xl rounded-lg text-amber-300 font-bold bg-[#191919]">
+        <button
+          onClick={() => {
+            const user_id = localStorage.getItem("email");
+            console.log("user_id from localStorage:", user_id);
+            if (!user_id) {
+              alert("Please log in to add to your watchlist.");
+              return;
+            }
+            addToWatchlist(user_id, personalMovie.id);
+          }}
+          className="px-6 md:px-8 py-2 text-lg md:text-2xl rounded-lg text-amber-300 font-bold bg-[#191919] cursor-pointer hover:bg-[#292929] transition duration-300 shadow-lg hover:shadow-xl"
+        >
           Watchlist
         </button>
       </div>

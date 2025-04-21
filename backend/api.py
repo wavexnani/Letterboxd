@@ -12,7 +12,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
 api = Api(app)
-CORS(app)
+CORS(app, origins=["http://localhost:3000"])
 
 TMDB_KEY = os.getenv('NEXT_PUBLIC_TMDB_API_KEY')
 
@@ -132,6 +132,8 @@ def movie_search():
         print("Error in searching movies:", str(e))
         return jsonify({'message': 'Internal server error'}), 500  # ✅ Also return on error
 
+
+
 def search_movies(query):
     url = f'https://api.themoviedb.org/3/search/movie?api_key={TMDB_KEY}&query={query}'
     res = requests.get(url)
@@ -162,16 +164,64 @@ def movie_trailer(movie_id):
             return f"https://www.youtube.com/watch?v={video['key']}"
     return None
 
-class Watchlist(db.Model):
+
+@app.route("/watchlist", methods=["POST"])
+def add_to_watchlist():
+    data = request.get_json()
+    user_id = data.get("username")
+    movie_id = data.get("movie_id")
+    
+    if not user_id or not movie_id:
+        return jsonify({"message": "Missing user_id or movie_id"}), 400
+
+    # Assuming you validate the user here
+    user = User.query.filter_by(username=user_id).first()
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    # Check if the movie is already in the watchlist
+    existing_entry = Watchlist.query.filter_by(user_id=user_id, movie_id=movie_id).first()
+    if existing_entry:
+        return jsonify({"message": "Movie already in watchlist"}), 400
+    # Add to watchlist
+    new_watchlist_entry = Watchlist(user_id=user_id, movie_id=movie_id)
+    db.session.add(new_watchlist_entry)
+    db.session.commit()
+    
+    return jsonify({"message": "Added to watchlist"}), 200
+
+@app.route('/get_watchlist', methods=['POST'])
+def get_watchlist():
+    data = request.get_json()
+    user_id = data.get("id")
+
+    user = User.query.filter_by(id=user_id).first()
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    watchlist_items = Watchlist.query.filter_by(user_id=user_id).all()
+    results = []
+    for item in watchlist_items:
+        movie = Movies.query.get(item.movie_id)
+        results.append({
+            'id': movie.id,
+            'title': movie.title,
+            'image': movie.image,
+            'rating': movie.rating,
+            'year': movie.year,
+            'trailer': movie.trailer,
+        })
+    return jsonify(results), 200
+
+
+class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    movie_id = db.Column(db.Integer, db.ForeignKey('movies.id'), nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(120), nullable=False)
 
-    user = db.relationship('User', backref=db.backref('watchlist', lazy=True))
-    movie = db.relationship('Movies', backref=db.backref('watchlisted_by', lazy=True))
-    def __repr__(self):
-        return f'<Watchlist {self.user_id} - {self.movie_id}>'
-
+   
+   
 
 class Movies(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -184,17 +234,16 @@ class Movies(db.Model):
     image = db.Column(db.String(120), nullable=False)
     adult = db.Column(db.Boolean, nullable=False)
     
-    def __repr__(self):
-        return f'<Movie {self.title}>'
+   
 
-class User(db.Model):
+class Watchlist(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(120), nullable=False)
+    user_id = db.Column(db.String(80), db.ForeignKey('user.id'))
+    movie_id = db.Column(db.Integer, db.ForeignKey('movies.id'))
 
-    def __repr__(self):
-        return f'<User = {self.username}> <email = {self.email}> '
+    user = db.relationship("User", backref="watchlist")
+    movie = db.relationship("Movies", backref="watchlist_entries")
+
 
 
 user_args = reqparse.RequestParser()
@@ -218,7 +267,7 @@ watchlist_args.add_argument('movie_id', type=int, required=True, help='Movie ID 
 
 watchlist_fields = {
     'id': fields.Integer,
-    'user_id': fields.Integer,
+    'user_id': fields.String,
     'movie_id': fields.Integer
 }
 
@@ -333,8 +382,7 @@ class user(Resource):
             abort(404, message="User not found")
         db.session.delete(user)
         db.session.commit()
-        Users = User.query.all()
-        return Users 
+        return {'message': f'User {id} deleted successfully'}, 200
 
 
 api.add_resource(movies, '/movies')
