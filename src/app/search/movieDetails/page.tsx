@@ -104,7 +104,7 @@ export default function MovieDetails() {
           <div onClick={() => router.back()} className="cursor-pointer">Back</div>
           <div onClick={() => router.push("/login")} className="cursor-pointer">Logout</div>
         </div>
-        <Image className="rounded-lg" src="/logo.png" alt="logo" width={90} height={80} />
+        <Image onClick={() => router.push('/home')} className="rounded-lg cursor-pointer" src="/logo.png" alt="logo" width={90} height={80} />
       </div>
 
       {/* Content */}
