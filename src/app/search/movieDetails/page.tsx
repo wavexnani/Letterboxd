@@ -1,5 +1,5 @@
 "use client";
-import { addToWatchlist } from "@/utils/watchlist"; // adjust path based on your project
+import { addToWatchlist } from "@/utils/watchlist";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -7,7 +7,8 @@ import axios from "axios";
 
 export default function MovieDetails() {
   const router = useRouter();
-  const [personalMovie, setPersonalMovie] = useState(null);
+  const [personalMovie, setPersonalMovie] = useState<any>(null);
+  const [reviewText, setReviewText] = useState<string>("");
 
   useEffect(() => {
     const storedMovie = localStorage.getItem("selectedMovie");
@@ -15,6 +16,9 @@ export default function MovieDetails() {
       setPersonalMovie(JSON.parse(storedMovie));
     }
   }, []);
+
+
+
 
   const addMovieToWatchlist = async (movieData: any) => {
     try {
@@ -38,9 +42,7 @@ export default function MovieDetails() {
       );
 
       if (res.status === 200 || res.status === 201) {
-        alert("Movie added to database!");
         const user_id = localStorage.getItem("email");
-        console.log("user_id from localStorage:", user_id);
         if (!user_id) {
           alert("Please log in to add to your watchlist.");
           return;
@@ -59,14 +61,12 @@ export default function MovieDetails() {
         );
         const movieId = res2.data.id;
         addToWatchlist(user_id, movieId);
+        alert("Movie added to watchlist!");
       } else {
         alert("Failed to add movie.");
       }
     } catch (error: any) {
-      console.error(
-        "Error posting movie:",
-        error.response?.data || error.message
-      );
+      console.error("Error posting movie:", error.response?.data || error.message);
       alert("Failed to add movie.");
     }
   };
@@ -99,58 +99,35 @@ export default function MovieDetails() {
       {/* Navbar */}
       <div className="absolute top-0 left-0 right-0 flex flex-wrap justify-between items-center pt-6 p-4 md:p-6 lg:px-16">
         <div className="flex gap-4 md:gap-8 text-sm md:text-lg font-bold ">
-          <div
-            onClick={() => router.push("/watchlist")}
-            className="cursor-pointer"
-          >
-            Watch List
-          </div>
+          <div onClick={() => router.push("/watchlist")} className="cursor-pointer">Watch List</div>
           <div>Setting</div>
-          <div onClick={() => router.back()} className="cursor-pointer">
-            Back
-          </div>
-          <div onClick={() => router.push("/login")} className="cursor-pointer">
-            Logout
-          </div>
+          <div onClick={() => router.back()} className="cursor-pointer">Back</div>
+          <div onClick={() => router.push("/login")} className="cursor-pointer">Logout</div>
         </div>
-        <Image
-          className="rounded-lg"
-          src="/logo.png"
-          alt="logo"
-          width={90}
-          height={80}
-        />
+        <Image className="rounded-lg" src="/logo.png" alt="logo" width={90} height={80} />
       </div>
 
-      {/* Content Wrapper - REMOVE absolute positioning */}
+      {/* Content */}
       <div className="flex flex-wrap flex-col md:flex-row items-center md:items-start justify-center gap-10 md:gap-28 px-6 md:px-16 mt-[-100px] md:mt-[-200px] relative z-10">
-        {/* Movie Poster */}
+        {/* Poster */}
         <div className="w-48 md:w-64 h-auto">
-          {personalMovie?.image ? (
-            <img
-              src={personalMovie.image}
-              alt="poster"
-              className="w-full h-auto rounded-lg"
-            />
-          ) : (
-            <img
-              src="/movies/inception.jpg"
-              alt="poster"
-              className="w-full h-auto rounded-lg"
-            />
-          )}
+          <img
+            src={personalMovie?.image || "/movies/inception.jpg"}
+            alt="poster"
+            className="w-full h-auto rounded-lg"
+          />
         </div>
 
-        {/* Movie Details */}
-        <div className="flex flex-col text-lg md:text-2xl text-center md:text-left max-w-lg md:max-w-2xl  p-4 md:p-6 rounded-lg shadow-lg">
+        {/* Details */}
+        <div className="flex flex-col text-lg md:text-2xl text-center md:text-left max-w-lg md:max-w-2xl p-4 md:p-6 rounded-lg shadow-lg">
           <div className="pb-4 md:pb-6 text-2xl md:text-3xl font-bold">
-            {personalMovie ? personalMovie.title : "Inception"}
+            {personalMovie?.title || "Movie Title"}
           </div>
           {personalMovie?.trailer !== "0" ? (
             <div className="pb-4 md:pb-6 flex font-bold justify-center md:justify-start items-center gap-2">
               Watch Trailer
               <Image
-                className="text-amber-300 text-2xl"
+                className="text-amber-300 text-2xl cursor-pointer"
                 onClick={() => window.open(personalMovie.trailer, "_blank")}
                 src="/play.jpg"
                 alt="play"
@@ -166,8 +143,6 @@ export default function MovieDetails() {
           <div className="pb-4 md:pb-6 font-bold">
             Movie Rating: {personalMovie?.rating ?? "N/A"}
           </div>
-
-          {/* Overview */}
           <div>
             <div className="font-bold text-xl md:text-2xl">Overview :</div>
             <p className="pt-2 md:pt-4 text-sm md:text-lg leading-relaxed">
@@ -180,9 +155,7 @@ export default function MovieDetails() {
       {/* Watchlist Button */}
       <div className="flex justify-center md:justify-end px-6 md:px-16 mt-10">
         <button
-          onClick={() => {
-            addMovieToWatchlist(personalMovie);
-          }}
+          onClick={() => addMovieToWatchlist(personalMovie)}
           className="px-6 md:px-8 py-2 text-lg md:text-2xl rounded-lg text-amber-300 font-bold bg-[#191919] cursor-pointer
            hover:bg-[#292929] transition duration-300 shadow-lg hover:shadow-xl"
         >
@@ -190,13 +163,26 @@ export default function MovieDetails() {
         </button>
       </div>
 
-      {/* Reviews Section */}
-      <div className="w-full md:w-[90%] lg:w-[80%] mx-auto mt-10 bg-[#191919] rounded-lg p-4 md:p-6 relative z-10">
-        <div className="font-bold text-lg md:text-2xl text-amber-300">
-          Reviews
-        </div>
-        <hr className="border-amber-300 mt-4 md:mt-8" />
-      </div>
+      {/* Review Form */}
+      <form
+        className="w-full md:w-[90%] lg:w-[80%] mx-auto mt-10 bg-[#191919] rounded-lg p-4 md:p-6 relative z-10"
+      >
+        <div className="font-bold text-lg md:text-2xl text-amber-300">Reviews</div>
+        <input
+          type="text"
+          value={reviewText}
+          onChange={(e) => setReviewText(e.target.value)}
+          placeholder="Write your review..."
+          className="m-0 p-2 mt-2 w-full outline-none focus:outline-none bg-[#101010] rounded text-white"
+        />
+        <hr className="my-4 border-amber-300" />
+        <button
+          type="submit"
+          className="bg-amber-300 text-black font-bold py-2 px-4 rounded hover:bg-yellow-400 transition"
+        >
+          Submit Review
+        </button>
+      </form>
     </div>
   );
 }

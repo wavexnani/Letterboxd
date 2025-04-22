@@ -12,9 +12,6 @@ export default function SearchPage() {
     router.push("/home");
   };
 
-  const pushTomovie = () => {
-    router.push("/movie");
-  };
 
   const [loading, setLoading] = useState(false);
   const [quary, setquary] = useState("");
@@ -47,7 +44,7 @@ export default function SearchPage() {
 
   return (
     <div>
-      <button onClick={pushTohome} className="text-2xl font-bold p-10 ">
+      <button onClick={pushTohome} className="text-2xl font-bold p-10 cursor-pointer">
         Back
       </button>
 

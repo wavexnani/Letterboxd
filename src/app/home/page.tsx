@@ -71,6 +71,12 @@ export default function HomePage() {
               >
                 Logout
               </button>
+              <button
+                onClick={() => router.push("/reviews")}
+                className="font-bold text-xl cursor-pointer"
+              >
+                Reviews
+              </button>
             </div>
 
             <div className="flex items-center gap-4">

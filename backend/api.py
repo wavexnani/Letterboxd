@@ -13,7 +13,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
 api = Api(app)
-CORS(app)
+CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
 
 TMDB_KEY = os.getenv('NEXT_PUBLIC_TMDB_API_KEY')
 
@@ -261,45 +261,59 @@ def delete_watchlist():
 
 @app.route('/submitReview', methods=['POST'])
 def submit_review():
+    try:
+        data = request.get_json()
+        print(data)
+
+        username = data.get("username")
+        movie_id = data.get("movie_id")
+        review = data.get("review")
+
+        if not username or not movie_id or not review:
+            return jsonify({'message': 'Missing username, movie_id, or review'}), 400
+
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+
+        movie = Movies.query.get(movie_id)
+        if not movie:
+            return jsonify({"message": "Movie not found"}), 404
+
+        new_review = Review(user_id=user.id, movie_id=movie.id, review=review)
+        db.session.add(new_review)
+        db.session.commit()
+
+        return jsonify({'message': 'Review submitted successfully', 'review': review}), 200
+
+    except Exception as e:
+        # Optional: log the exception here using logging module
+        print(f"Error occurred: {e}")
+        return jsonify({'message': 'An error occurred while submitting the review', 'error': str(e)}), 500
+
+@app.route('/get_reviews', methods=['POST'])
+def get_reviews():
     data = request.get_json()
     username = data.get("username")
-    movie_id = data.get("movie_id")
-    review = data.get("review")
-
-    if not username or not movie_id or not review:
-        return jsonify({'message': 'Missing username, movie_id, or review'}), 400
+    if not username:
+        return jsonify({"message": "Missing username"}), 400
 
     user = User.query.filter_by(username=username).first()
     if not user:
-        return jsonify({'message': 'User not found'}), 404
-    movie = Movies.query.get(movie_id)
-    if not movie:
-        return jsonify({"message": "Movie not found"}), 404
-    
-    new_review = Review(user_id=user.id, movie_id=movie.id, review=review)
-    db.session.add(new_review)
-    db.session.commit()
-    return jsonify({'message': 'Review submitted successfully', 'review': review}), 200
+        return jsonify({"message": "User not found"}), 404
 
-
-@app.route('/getReviews', methods=['POST'])
-def get_reviews():
-    data = request.get_json()
-    movie_id = data.get("movie_id")
-
-    if not movie_id:
-        return jsonify({'message': 'Missing movie_id'}), 400
-
-    reviews = Review.query.filter_by(movie_id=movie_id).all()
+    reviews = Review.query.filter_by(user_id=user.id).all()
     result = []
-    for review in reviews:
-        user = User.query.get(review.user_id)
+    for r in reviews:
+        movie = Movies.query.get(r.movie_id)
         result.append({
-            'username': user.username if user else "Unknown",
-            'review': review.review
+            "review": r.review,
+            "movie_id": r.movie_id,
+            "movie_title": movie.title if movie else "Unknown",
+            "backdrop": movie.backdrop if movie else None,
         })
 
-    return jsonify({'reviews': result}), 200
+    return jsonify(result), 200
 
 
 
@@ -472,6 +486,7 @@ class movie(Resource):
             abort(404, message="Movie not found")
         return movie
 
+
 class users(Resource):
     @marshal_with(user_fields)
     def get(self):
@@ -581,8 +596,6 @@ def home():
     return "<h1>Welcome to the Flask API!</h1>"
 
 
-with app.app_context():
-    db.create_all()
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -23,22 +23,25 @@ export default function MoviePage() {
     }
 
     try {
-      const res = await axios.post("http://127.0.0.1:5000/submit_review", {
-        username: email,
-        movie_id: personalMovie.id,
-        review: reviewText,
-      },
-      {
+      const response = await fetch("http://127.0.0.1:5000/submitReview", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          username: email,
+          movie_id: personalMovie.id,
+          review: reviewText,
+        }),
       });
 
-      if (res.status === 200) {
+      const data = await response.json();
+
+      if (response.status === 200) {
         alert("Review submitted successfully!");
-        setReviewText(""); // Clear input
+        setReviewText(""); // Clear the input field
       } else {
-        alert("Failed to submit review.");
+        alert(data.message || "Failed to submit review.");
       }
     } catch (error) {
       console.error("Error submitting review:", error);
@@ -92,7 +95,12 @@ export default function MoviePage() {
           >
             Watch List
           </div>
-          <div>Setting</div>
+          <div
+            onClick={() => router.push("/reviews")}
+            className="cursor-pointer"
+          >
+            Reviews
+          </div>
           <div onClick={() => router.back()} className="cursor-pointer">
             Back
           </div>
@@ -184,7 +192,6 @@ export default function MoviePage() {
         </button>
       </div>
 
-      {/* Reviews Section */}
       {/* Reviews Section */}
       <form
         onSubmit={handleReviews}
