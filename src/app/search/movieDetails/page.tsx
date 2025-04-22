@@ -1,7 +1,9 @@
 "use client";
+import { addToWatchlist } from "@/utils/watchlist"; // adjust path based on your project
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 
 export default function MovieDetails() {
   const router = useRouter();
@@ -13,6 +15,61 @@ export default function MovieDetails() {
       setPersonalMovie(JSON.parse(storedMovie));
     }
   }, []);
+
+  const addMovieToWatchlist = async (movieData: any) => {
+    try {
+      const res = await axios.post(
+        "http://127.0.0.1:5000/movies",
+        {
+          title: movieData.title,
+          backdrop: movieData.backdrop,
+          year: movieData.year || "2025",
+          rating: movieData.rating,
+          trailer: movieData.trailer,
+          description: movieData.description,
+          image: movieData.image,
+          adult: movieData.adult || false,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (res.status === 200 || res.status === 201) {
+        alert("Movie added to database!");
+        const user_id = localStorage.getItem("email");
+        console.log("user_id from localStorage:", user_id);
+        if (!user_id) {
+          alert("Please log in to add to your watchlist.");
+          return;
+        }
+
+        const res2 = await axios.post(
+          "http://127.0.0.1:5000/movies_id",
+          {
+            movieTitle: movieData.title,
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const movieId = res2.data.id;
+        addToWatchlist(user_id, movieId);
+      } else {
+        alert("Failed to add movie.");
+      }
+    } catch (error: any) {
+      console.error(
+        "Error posting movie:",
+        error.response?.data || error.message
+      );
+      alert("Failed to add movie.");
+    }
+  };
 
   if (!personalMovie) return <div className="text-white p-6">Loading...</div>;
 
@@ -42,12 +99,19 @@ export default function MovieDetails() {
       {/* Navbar */}
       <div className="absolute top-0 left-0 right-0 flex flex-wrap justify-between items-center pt-6 p-4 md:p-6 lg:px-16">
         <div className="flex gap-4 md:gap-8 text-sm md:text-lg font-bold ">
-          <div>Watch List</div>
+          <div
+            onClick={() => router.push("/watchlist")}
+            className="cursor-pointer"
+          >
+            Watch List
+          </div>
           <div>Setting</div>
           <div onClick={() => router.back()} className="cursor-pointer">
             Back
           </div>
-          <div>Logout</div>
+          <div onClick={() => router.push("/login")} className="cursor-pointer">
+            Logout
+          </div>
         </div>
         <Image
           className="rounded-lg"
@@ -115,7 +179,13 @@ export default function MovieDetails() {
 
       {/* Watchlist Button */}
       <div className="flex justify-center md:justify-end px-6 md:px-16 mt-10">
-        <button className="px-6 md:px-8 py-2 text-lg md:text-2xl rounded-lg text-amber-300 font-bold bg-[#191919]">
+        <button
+          onClick={() => {
+            addMovieToWatchlist(personalMovie);
+          }}
+          className="px-6 md:px-8 py-2 text-lg md:text-2xl rounded-lg text-amber-300 font-bold bg-[#191919] cursor-pointer
+           hover:bg-[#292929] transition duration-300 shadow-lg hover:shadow-xl"
+        >
           Watchlist
         </button>
       </div>

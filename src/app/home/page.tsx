@@ -4,14 +4,16 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import React from "react";
-import { on } from "events";
 
 export default function HomePage() {
-  const router = useRouter();
+  const [username, setUsername] = useState<string | null>(null);
 
-  const pushTomovie = () => {
-    router.push("/movie");
-  };
+  useEffect(() => {
+    const storedUsername = localStorage.getItem("email");
+    setUsername(storedUsername);
+  }, []);
+
+  const router = useRouter();
 
   const handleLogin = () => {
     router.push("/login");
@@ -52,19 +54,40 @@ export default function HomePage() {
           />
 
           {/*Nav bar*/}
-          <div className="flex-wrap absolute top-0 right-10 flex justify-between gap-x-10 pt-5 px-1">
-            <button className="font-bold text-xl">Watch List</button>
-            <button className="font-bold text-xl">Setting</button>
-            <button onClick={handleLogin} className="font-bold text-xl">
-              Logout
-            </button>
-            <Image
-              className="rounded-lg "
-              src="/logo.png"
-              alt="logo"
-              width={110}
-              height={100}
-            />
+          <div className="flex-wrap absolute top-0 left-10 right-10 flex justify-between items-center pt-5 px-4">
+            <div className="flex gap-x-10">
+              <button
+                onClick={() => router.push("/watchlist")}
+                className="font-bold text-xl cursor-pointer"
+              >
+                Watch List
+              </button>
+              <button className="font-bold text-xl cursor-pointer">
+                Setting
+              </button>
+              <button
+                onClick={handleLogin}
+                className="font-bold text-xl cursor-pointer"
+              >
+                Logout
+              </button>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Image
+                className="rounded-lg"
+                src="/logo.png"
+                alt="logo"
+                width={110}
+                height={100}
+              />
+
+              {username && (
+                <div className="text-white font-semibold text-lg">
+                  {username}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="pt-32 flex flex-col flex-wrap justify-between gap-5 items-center">
@@ -168,7 +191,6 @@ export default function HomePage() {
                     height={50}
                     alt="play"
                     className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer z-30"
-                    // onClick={}
                   />
 
                   <h2 className="text-lg text-center pt-3 font-bold">

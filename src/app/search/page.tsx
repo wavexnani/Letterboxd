@@ -98,7 +98,7 @@ export default function SearchPage() {
               {searchedMovies.map((movie: any) => (
                 <div
                   key={movie.id}
-                  className="bg-[#191919] mt-8 rounded-lg p-10 flex flex-col items-center justify-center shrink-0 shadow-lg"
+                  className="bg-[#191919] mt-8 mb-8 rounded-lg p-10 flex flex-col items-center justify-center shrink-0 shadow-lg"
                 >
                   <Image
                     onClick={() => selectedMovie(movie)}

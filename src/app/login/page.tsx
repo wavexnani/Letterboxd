@@ -12,14 +12,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
  
-  localStorage.setItem("email", user.email);
-
-  
   const onLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setLoading(true);
-      
+  
       const response = await axios.post(
         "http://127.0.0.1:5000/fetch_movies",
         user,
@@ -27,7 +24,14 @@ export default function LoginPage() {
           headers: { "Content-Type": "application/json" },
         }
       );
+  
       console.log("Login success:", response.data);
+  
+      // ✅ Set email in localStorage only on client after successful login
+      if (typeof window !== "undefined") {
+        localStorage.setItem("email", user.email);
+      }
+  
       router.push("/home");
     } catch (error: any) {
       console.error("Login error:", error.message);
@@ -88,12 +92,12 @@ export default function LoginPage() {
           {/* Email */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-1">
-              Email
+              Username
             </label>
             <input
               id="email"
               type="text"
-              placeholder="Enter your email"
+              placeholder="Enter your Username"
               value={user.email}
               onChange={(e) => setUser({ ...user, email: e.target.value })}
               className="w-full px-4 py-3 rounded-md bg-neutral-100 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition"

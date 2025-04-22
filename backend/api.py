@@ -1,3 +1,4 @@
+import time
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_restful import Api, Resource, reqparse, fields, marshal_with, abort
@@ -12,7 +13,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
 api = Api(app)
-CORS(app, origins=["http://localhost:3000"])
+CORS(app)
 
 TMDB_KEY = os.getenv('NEXT_PUBLIC_TMDB_API_KEY')
 
@@ -27,7 +28,6 @@ def fetch_movies():
         email = data.get("email")
         password = data.get("password") 
 
-        # Check if both email and password were provided
         if not email or not password:
             return jsonify({'message': 'Email and password are required'}), 400
 
@@ -36,13 +36,17 @@ def fetch_movies():
         if not user:
             return jsonify({'message': 'User not found'}), 404
 
-        # Compare provided password with stored hash
-        hashed_password = user.password.encode('utf-8')  # Stored as string
-        print(f"Hashed password from DB: {hashed_password}")
+        # Check password
+        hashed_password = user.password.encode('utf-8')
         if not bcrypt.checkpw(password.encode('utf-8'), hashed_password):
             return jsonify({'message': 'Invalid credentials'}), 401
-        
-        # Fetch popular movies from TMDB
+
+        # ✅ Check if movies already exist in the database
+        existing_movies = Movies.query.first()
+        if existing_movies:
+            return jsonify({'message': 'Movies already exist, no need to fetch'}), 200
+
+        # Fetch from TMDB if no movies exist
         uri = f'https://api.themoviedb.org/3/movie/popular?api_key={TMDB_KEY}&language=en-US&page=1'
         response = requests.get(uri, timeout=10)
         if response.status_code != 200:
@@ -78,52 +82,40 @@ def fetch_movies():
             
         db.session.commit()
         return jsonify({'message': 'Movies fetched and saved successfully'}), 200
-            
 
     except Exception as e:
         print(f"Server error: {e}")
         return jsonify({'message': 'Internal server error'}), 500
 
-
 @app.route('/movies_id', methods=['POST'])
 def movies_id():
     try:
         data = request.get_json()
-        if not data or 'id' not in data:
-            return jsonify({'message': 'Missing or invalid ID'}), 400
+        if not data or 'movieTitle' not in data:
+            return jsonify({'message': 'Missing or invalid title'}), 400
 
-        movie_id = data['id']
-        movie = Movies.query.filter_by(id=movie_id).first()
+        title = data['movieTitle']
+        movie = Movies.query.filter_by(title=title).first()
         if not movie:
             return jsonify({'message': 'Movie not found'}), 404
 
-        return jsonify({
-            'id': movie.id,
-            'title': movie.title,
-            'backdrop': movie.backdrop,
-            'year': movie.year,
-            'rating': movie.rating,
-            'trailer': movie.trailer,
-            'description': movie.description,
-            'image': movie.image,
-            'adult': movie.adult
-        }), 200
+        return jsonify({'id': movie.id}), 200
 
     except Exception as e:
-        print("Error in fetching movie by ID:", str(e))
+        print("Error in fetching movie by title:", str(e))
         return jsonify({'message': 'Internal server error'}), 500
-
 
 
 @app.route('/movie_search', methods=['POST'])
 def movie_search():
     try:
         data = request.get_json()
-        if not data or 'quary' not in data:
+        query = data.get('quary', '').strip()
+        if not query:
             print("y")
             return jsonify({'message': 'Missing or invalid query'}), 400
 
-        searchedMovies = search_movies(data['quary'])
+        searchedMovies = search_movies(query)
         print(searchedMovies)
         print("fuck off")
         return jsonify({'results': searchedMovies}), 200  # ✅ You must return a response
@@ -135,9 +127,18 @@ def movie_search():
 
 
 def search_movies(query):
-    url = f'https://api.themoviedb.org/3/search/movie?api_key={TMDB_KEY}&query={query}'
-    res = requests.get(url)
-    data = res.json()
+    try:
+        url = f'https://api.themoviedb.org/3/search/movie?api_key={TMDB_KEY}&query={query}'
+        print(f"Fetching URL: {url}")
+        res = requests.get(url)
+        res.raise_for_status()  # Raise HTTPError if not 200
+        data = res.json()
+        print(data)
+        print("fuck you")
+    except Exception as e:
+        print("❌ Error fetching from TMDB:", e)
+        return []
+
     movies = []
     for movie in data.get('results', []):
         movies.append({
@@ -146,11 +147,12 @@ def search_movies(query):
             'backdrop': f"https://image.tmdb.org/t/p/original{movie.get('backdrop_path')}",
             'year': movie.get('release_date', '')[:4],
             'rating': movie.get('vote_average', 0),
-            'trailer': movie_trailer(movie['id']) or 'Trailer not available',
+            'trailer': movie_trailer(movie['id']) or False,
             'description': movie.get('overview', 'No description available'),
             'image': f"https://image.tmdb.org/t/p/original{movie.get('poster_path')}",
             'adult': movie.get('adult', False)
         })
+        time.sleep(0.2)
     return movies
 
 
@@ -168,50 +170,145 @@ def movie_trailer(movie_id):
 @app.route("/watchlist", methods=["POST"])
 def add_to_watchlist():
     data = request.get_json()
-    user_id = data.get("username")
+    username = data.get("username")
     movie_id = data.get("movie_id")
     
-    if not user_id or not movie_id:
-        return jsonify({"message": "Missing user_id or movie_id"}), 400
+    if not username or not movie_id:
+        return jsonify({"message": "Missing username or movie_id"}), 400
 
-    # Assuming you validate the user here
-    user = User.query.filter_by(username=user_id).first()
+    user = User.query.filter_by(username=username).first()
     if not user:
         return jsonify({"message": "User not found"}), 404
 
-    # Check if the movie is already in the watchlist
-    existing_entry = Watchlist.query.filter_by(user_id=user_id, movie_id=movie_id).first()
+    # Use the actual user.id now
+    existing_entry = Watchlist.query.filter_by(user_id=user.id, movie_id=movie_id).first()
     if existing_entry:
         return jsonify({"message": "Movie already in watchlist"}), 400
-    # Add to watchlist
-    new_watchlist_entry = Watchlist(user_id=user_id, movie_id=movie_id)
+
+    new_watchlist_entry = Watchlist(user_id=user.id, movie_id=movie_id)
     db.session.add(new_watchlist_entry)
     db.session.commit()
     
     return jsonify({"message": "Added to watchlist"}), 200
 
+
+
 @app.route('/get_watchlist', methods=['POST'])
 def get_watchlist():
-    data = request.get_json()
-    user_id = data.get("id")
+    try:
+        # Validate input
+        data = request.get_json()
+        if not data or "username" not in data:
+            return jsonify({'message': 'Missing username in request'}), 400
 
-    user = User.query.filter_by(id=user_id).first()
+        username = data["username"]
+
+        # Check if user exists
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+
+        # Get all watchlist items for the user
+        watchlist_items = Watchlist.query.filter_by(user_id=user.id).all()
+        results = []
+
+        for item in watchlist_items:
+            movie = Movies.query.get(item.movie_id)
+            if movie:
+                results.append({
+                    'id': movie.id,
+                    'title': movie.title,
+                    'image': movie.image,
+                    'backdrop': movie.backdrop,
+                    'rating': movie.rating,
+                    'year': movie.year,
+                    'trailer': movie.trailer,
+                })
+            else:
+                print(f"Warning: Movie with ID {item.movie_id} not found in Movies table.")
+
+        return jsonify(results), 200
+
+    except Exception as e:
+        print(f"Server error in /get_watchlist: {e}")
+        return jsonify({'message': 'Internal server error'}), 500
+
+
+@app.route('/delete_watchlist', methods=['POST'])
+def delete_watchlist():
+    data = request.get_json()
+    username = data.get("username")
+    movie_id = data.get("movie_id")
+
+    if not data or "username" not in data:
+            return jsonify({'message': 'Missing username in request'}), 400
+
+
+    # Check if user exists
+    user = User.query.filter_by(username=username).first()
     if not user:
         return jsonify({'message': 'User not found'}), 404
 
-    watchlist_items = Watchlist.query.filter_by(user_id=user_id).all()
-    results = []
-    for item in watchlist_items:
-        movie = Movies.query.get(item.movie_id)
-        results.append({
-            'id': movie.id,
-            'title': movie.title,
-            'image': movie.image,
-            'rating': movie.rating,
-            'year': movie.year,
-            'trailer': movie.trailer,
+    watchlist_entry = Watchlist.query.filter_by(user_id=user.id, movie_id=movie_id).first()
+    if not watchlist_entry:
+        return jsonify({"message": "Movie not in watchlist"}), 404
+
+    db.session.delete(watchlist_entry)
+    db.session.commit()
+
+    return jsonify({"message": "Removed from watchlist"}), 200
+
+
+@app.route('/submitReview', methods=['POST'])
+def submit_review():
+    data = request.get_json()
+    username = data.get("username")
+    movie_id = data.get("movie_id")
+    review = data.get("review")
+
+    if not username or not movie_id or not review:
+        return jsonify({'message': 'Missing username, movie_id, or review'}), 400
+
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+    movie = Movies.query.get(movie_id)
+    if not movie:
+        return jsonify({"message": "Movie not found"}), 404
+    
+    new_review = Review(user_id=user.id, movie_id=movie.id, review=review)
+    db.session.add(new_review)
+    db.session.commit()
+    return jsonify({'message': 'Review submitted successfully', 'review': review}), 200
+
+
+@app.route('/getReviews', methods=['POST'])
+def get_reviews():
+    data = request.get_json()
+    movie_id = data.get("movie_id")
+
+    if not movie_id:
+        return jsonify({'message': 'Missing movie_id'}), 400
+
+    reviews = Review.query.filter_by(movie_id=movie_id).all()
+    result = []
+    for review in reviews:
+        user = User.query.get(review.user_id)
+        result.append({
+            'username': user.username if user else "Unknown",
+            'review': review.review
         })
-    return jsonify(results), 200
+
+    return jsonify({'reviews': result}), 200
+
+
+
+class Review(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    movie_id = db.Column(db.Integer, db.ForeignKey('movies.id'), nullable=False)
+    review = db.Column(db.Text, nullable=False)
+
 
 
 class User(db.Model):
@@ -239,17 +336,23 @@ class Movies(db.Model):
 class Watchlist(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(80), db.ForeignKey('user.id'))
-    movie_id = db.Column(db.Integer, db.ForeignKey('movies.id'))
+    movie_id = db.Column(db.Integer, db.ForeignKey('movies.id'), nullable=True)
 
     user = db.relationship("User", backref="watchlist")
     movie = db.relationship("Movies", backref="watchlist_entries")
 
+
+reviews_args = reqparse.RequestParser()
+reviews_args.add_argument('user_id', type=int, required=True, help='User ID of the user')
+reviews_args.add_argument('movies_id', type=int, required=True)
+reviews_args.add_argument('review', type=str, required=True)
 
 
 user_args = reqparse.RequestParser()
 user_args.add_argument('username', type=str,required=True, help='Username of the user')
 user_args.add_argument('email', type=str, required=True, help='Email of the user')
 user_args.add_argument('password', type=str, required=True, help='Password of the user')
+
 
 movie_args = reqparse.RequestParser()
 movie_args.add_argument('title', type=str, required=True, help='Title of the movie')
@@ -261,9 +364,19 @@ movie_args.add_argument('description', type=str, required=True, help='Descriptio
 movie_args.add_argument('image', type=str, required=True, help='Image of the movie')
 movie_args.add_argument('adult', type=bool, required=True, help='Adult flag (True/False)')
 
+
 watchlist_args = reqparse.RequestParser()
 watchlist_args.add_argument('user_id', type=int, required=True, help='User ID is required')
 watchlist_args.add_argument('movie_id', type=int, required=True, help='Movie ID is required')
+
+
+reviews_fields = {
+    'id': fields.Integer,
+    'user_id': fields.String,
+    'movie_id': fields.Integer,
+    'review': fields.String
+}
+
 
 watchlist_fields = {
     'id': fields.Integer,
@@ -291,6 +404,12 @@ user_fields = {
 }
 
 
+class reviews(Resource):
+    @marshal_with(reviews_fields)
+    def get(self):
+        reviews = Review.query.all()
+        return reviews
+
 class watchlist(Resource):
     @marshal_with(watchlist_fields)
     def get(self):
@@ -307,16 +426,32 @@ class watchlist(Resource):
         return watchlists, 201
 
     @marshal_with(watchlist_fields)
-    def delete(self, id):
-        watchlist = Watchlist.query.filter_by(id=id).first()
-        if not watchlist:
-            abort(404, message="Watchlist not found")
-        db.session.delete(watchlist)
-        db.session.commit()
+    def delete(self):
         watchlists = Watchlist.query.all()
+        for watchlist in watchlists:
+            db.session.delete(watchlist)
+        db.session.commit()
         return watchlists, 200
 
 class movies(Resource):
+    @marshal_with(movie_fields)
+    def post(self):
+        args = movie_args.parse_args()
+        new_movie = Movies(
+            title=args['title'],
+            backdrop=args['backdrop'],
+            year=args['year'],
+            rating=args['rating'],
+            trailer=args['trailer'],
+            description=args['description'],
+            image=args['image'],
+            adult=args['adult']
+        )
+        db.session.add(new_movie)
+        db.session.commit()
+        movies = Movies.query.all()
+        return movies, 201
+    
     @marshal_with(movie_fields)
     def get(self):
         movies = Movies.query.all()
@@ -351,6 +486,32 @@ class users(Resource):
         db.session.commit()
         users = User.query.all()
         return users, 201
+    
+    @marshal_with(user_fields , id)
+    def delete(self, id):
+        watchlist = Watchlist.query.filter_by(id=id).first()
+        if not watchlist:
+            abort(404, message="Watchlist not found")
+        db.session.delete(watchlist)
+        db.session.commit()
+        return {'message': f'Watchlist {id} deleted successfully'}, 200
+
+class watch(Resource):
+    @marshal_with(watchlist_fields)
+    def get(self, id):
+        watchlist = Watchlist.query.filter_by(id=id).first()
+        if not watchlist:
+            abort(404, message="Watchlist not found")
+        return watchlist
+
+    @marshal_with(watchlist_fields)
+    def delete(self, id):
+        watchlist = Watchlist.query.filter_by(id=id).first()
+        if not watchlist:
+            abort(404, message="Watchlist not found")
+        db.session.delete(watchlist)
+        db.session.commit()
+        return {'message': f'Watchlist {id} deleted successfully'}, 200
 
 class user(Resource):
     @marshal_with(user_fields)
@@ -385,9 +546,11 @@ class user(Resource):
         return {'message': f'User {id} deleted successfully'}, 200
 
 
+api.add_resource(reviews,'/reviews')
 api.add_resource(movies, '/movies')
 api.add_resource(movie, '/movies/<int:id>')
 api.add_resource(watchlist, '/watchlist')
+api.add_resource(watch,'/watchlist/<int:id>')
 api.add_resource(users, '/users')
 api.add_resource(user, '/users/<int:id>')
 
@@ -413,37 +576,13 @@ def signup():
     db.session.commit()
     return jsonify({'message': 'User created successfully'}), 201
 
-
-
-@app.route('/login', methods=['POST'])
-def login():
-    data = request.get_json()
-    email = data.get("email")
-    password = data.get("password") 
-    
-    user = User.query.filter((User.email == email) | (User.username == email)).first()
-    if not user:
-        return jsonify({'message': 'User not found'}), 404
-
-    hashed_password = user.password.encode('utf-8')  # Stored as str, convert to bytes
-
-    if bcrypt.checkpw(password.encode('utf-8'), hashed_password):
-        print("hello")
-        if Movies.query.count() == 0:
-            try:
-                fetch_movies()
-            except Exception as e:
-                print(f"Error fetching movies: {e}")
-
-        return jsonify({'message': 'Login successful'}), 200
-    return jsonify({'message': 'Invalid credentials'}), 401
-
-
-
 @app.route('/')
 def home():
     return "<h1>Welcome to the Flask API!</h1>"
 
+
+with app.app_context():
+    db.create_all()
 
 if __name__ == '__main__':
     app.run(debug=True)

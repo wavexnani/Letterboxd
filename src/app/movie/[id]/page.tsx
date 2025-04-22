@@ -1,37 +1,48 @@
 "use client";
+import { addToWatchlist } from "@/utils/watchlist";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function MoviePage() {
+  const router = useRouter();
   const params = useParams();
   const id = params?.id as string;
   const [personalMovie, setPersonalMovie] = useState<any>(null);
+  const [reviewText, setReviewText] = useState<string>("");
 
-  const addToWatchlist = async (username: string, movieId: number) => {
+  const handleReviews = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = localStorage.getItem("email");
+
+    if (!email || !personalMovie?.id) {
+      alert("Please login to submit a review.");
+      return;
+    }
+
     try {
-      const res = await axios.post(
-        "http://127.0.0.1:5000/watchlist", 
-        { username, movie_id: movieId },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const res = await axios.post("http://127.0.0.1:5000/submit_review", {
+        username: email,
+        movie_id: personalMovie.id,
+        review: reviewText,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       if (res.status === 200) {
-        alert("Added to watchlist!");
+        alert("Review submitted successfully!");
+        setReviewText(""); // Clear input
       } else {
-        alert("Failed to add to watchlist.");
+        alert("Failed to submit review.");
       }
-    } catch (error: any) {
-      console.error(
-        "Error adding to watchlist:",
-        error.response?.data || error.message
-      );
-      alert("Failed to add to watchlist.");
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      alert("Error while submitting review.");
     }
   };
 
@@ -75,13 +86,23 @@ export default function MoviePage() {
       {/* Navbar */}
       <div className="absolute top-0 left-0 right-0 flex flex-wrap justify-between items-center pt-6 p-4 md:p-6 lg:px-16">
         <div className="flex gap-4 md:gap-8 text-sm md:text-lg font-bold ">
-          <div>Watch List</div>
+          <div
+            onClick={() => router.push("/watchlist")}
+            className="cursor-pointer"
+          >
+            Watch List
+          </div>
           <div>Setting</div>
-          <div>Back</div>
-          <div>Logout</div>
+          <div onClick={() => router.back()} className="cursor-pointer">
+            Back
+          </div>
+          <div onClick={() => router.push("/login")} className="cursor-pointer">
+            Logout
+          </div>
         </div>
         <Image
-          className="rounded-lg"
+          onClick={() => router.push("/home")}
+          className="rounded-lg cursor-pointer"
           src="/logo.png"
           alt="logo"
           width={90}
@@ -156,19 +177,37 @@ export default function MoviePage() {
             }
             addToWatchlist(user_id, personalMovie.id);
           }}
-          className="px-6 md:px-8 py-2 text-lg md:text-2xl rounded-lg text-amber-300 font-bold bg-[#191919] cursor-pointer hover:bg-[#292929] transition duration-300 shadow-lg hover:shadow-xl"
+          className="px-6 md:px-8 py-2 text-lg md:text-2xl rounded-lg text-amber-300 font-bold bg-[#191919] cursor-pointer
+           hover:bg-[#292929] transition duration-300 shadow-lg hover:shadow-xl"
         >
           Watchlist
         </button>
       </div>
 
       {/* Reviews Section */}
-      <div className="w-full md:w-[90%] lg:w-[80%] mx-auto mt-10 bg-[#191919] rounded-lg p-4 md:p-6 relative z-10">
+      {/* Reviews Section */}
+      <form
+        onSubmit={handleReviews}
+        className="w-full md:w-[90%] lg:w-[80%] mx-auto mt-10 bg-[#191919] rounded-lg p-4 md:p-6 relative z-10"
+      >
         <div className="font-bold text-lg md:text-2xl text-amber-300">
           Reviews
         </div>
-        <hr className="border-amber-300 mt-4 md:mt-8" />
-      </div>
+        <input
+          type="text"
+          value={reviewText}
+          onChange={(e) => setReviewText(e.target.value)}
+          placeholder="Write your review..."
+          className="m-0 p-2 mt-2 w-full outline-none focus:outline-none bg-[#101010] rounded text-white"
+        />
+        <hr className="my-4 border-amber-300" />
+        <button
+          type="submit"
+          className="bg-amber-300 text-black font-bold py-2 px-4 rounded hover:bg-yellow-400 transition"
+        >
+          Submit Review
+        </button>
+      </form>
     </div>
   );
 }
