@@ -1,103 +1,141 @@
+"use client";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
+import axios from "axios";
+import React, { useState } from "react";
+import { toast } from "react-hot-toast";
+import { useEffect } from "react";
 
-export default function Home() {
+export default function LoginPage() {
+  const [user, setUser] = useState({ email: "", password: "" });
+  const [buttonDisabled, setButtonDisabled] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+ 
+  const onLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+  
+      const response = await axios.post(
+        "http://127.0.0.1:5000/fetch_movies",
+        user,
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+  
+      console.log("Login success:", response.data);
+  
+      // ✅ Set email in localStorage only on client after successful login
+      if (typeof window !== "undefined") {
+        localStorage.setItem("email", user.email);
+      }
+  
+      router.push("/home");
+    } catch (error: any) {
+      console.error("Login error:", error.message);
+      toast.error("Error logging in", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignup = () => router.push("/signup");
+
+  useEffect(() => {
+    setButtonDisabled(!(user.email && user.email && user.password));
+  }, [user]);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+    <div className="relative min-h-screen text-white font-sans">
+      {/* Background Image */}
+      <div className="absolute inset-0 -z-10">
         <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+          src="/netflix.jpg"
+          alt="background"
+          fill
+          className="object-cover"
         />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+        <div className="absolute inset-0 bg-black opacity-70" />
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+      {/* Header */}
+      <div className="flex justify-between items-center px-6 py-8 md:px-16 text-2xl md:text-4xl font-bold z-10 relative">
+        <div>Letter Boxd</div>
+        <Image
+          src="/logo.png"
+          alt="logo"
+          width={90}
+          height={90}
+          className="rounded-xl"
+        />
+      </div>
+
+      {/* Signup Button */}
+      <div className="w-11/12 max-w-md mx-auto mt-20 bg-neutral-800/90 rounded-xl py-4 px-6 text-xl flex items-center justify-between z-10 relative">
+        <span>New here?</span>
+        <button
+          onClick={handleSignup}
+          className="bg-yellow-400 text-black px-4 py-1 rounded hover:bg-yellow-300"
+        >
+          Register
+        </button>
+      </div>
+
+      {/* Login Form */}
+      <div className="w-11/12 max-w-md mx-auto mt-6 bg-neutral-900/90 backdrop-blur-md rounded-2xl py-10 px-8 z-10 relative shadow-lg border border-neutral-700">
+        <h2 className="text-3xl font-semibold text-center mb-6">
+          {loading ? "Logging In..." : "Login to Your Account"}
+        </h2>
+        <form onSubmit={onLogin} className="space-y-5">
+          {/* Email */}
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium mb-1">
+              Username
+            </label>
+            <input
+              id="email"
+              type="text"
+              placeholder="Enter your Username"
+              value={user.email}
+              onChange={(e) => setUser({ ...user, email: e.target.value })}
+              className="w-full px-4 py-3 rounded-md bg-neutral-100 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+
+          {/* Password */}
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium mb-1"
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={user.password}
+              onChange={(e) => setUser({ ...user, password: e.target.value })}
+              className="w-full px-4 py-3 rounded-md bg-neutral-100 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition"
+            />
+          </div>
+
+          {/* Submit */}
+          <button
+            type="submit"
+            className={`w-full py-3 text-lg rounded-md font-semibold transition duration-200 ${
+              buttonDisabled
+                ? "bg-gray-600 cursor-not-allowed text-white"
+                : "bg-yellow-400 text-black hover:bg-yellow-300"
+            }`}
+            disabled={buttonDisabled}
           >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+            {buttonDisabled ? "Please fill all fields" : "Login"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
